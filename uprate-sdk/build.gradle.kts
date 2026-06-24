@@ -45,9 +45,9 @@ afterEvaluate {
         publications {
             create<MavenPublication>("release") {
                 from(components["release"])
-                groupId = "com.upratehq"
+                groupId = "com.github.UprateHQ"
                 artifactId = "uprate-android-sdk"
-                version = "1.0.0"
+                version = "0.1.0"
             }
         }
     }

@@ -28,7 +28,7 @@
 
 ### JitPack
 
-Add the JitPack repository to your `settings.gradle.kts`:
+Add the JitPack repository to your app's `settings.gradle.kts`:
 
 ```kotlin
 dependencyResolutionManagement {
@@ -44,9 +44,35 @@ Add the dependency to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.UprateHQ:uprate-sdk-android:0.1.0")
+    implementation("com.github.UprateHQ:uprate-android-sdk:0.1.0")
 }
 ```
+
+If the repository or JitPack artifact is private, add your JitPack token to
+`~/.gradle/gradle.properties`:
+
+```properties
+authToken=YOUR_JITPACK_TOKEN
+```
+
+Then configure the JitPack repository with credentials:
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io") {
+            credentials {
+                username = providers.gradleProperty("authToken").orNull
+                password = ""
+            }
+        }
+    }
+}
+```
+
+Do not commit JitPack tokens to your repository.
 
 ## Quick Start
 
