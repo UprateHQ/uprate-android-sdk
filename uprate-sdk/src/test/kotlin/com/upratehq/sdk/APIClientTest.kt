@@ -101,6 +101,30 @@ class APIClientTest {
     }
 
     @Test
+    fun surfacesServerMessageOn401() = runTest {
+        val serverMessage = "This does not look like an SDK key. Keys from Settings -> API keys " +
+            "only work with the REST API; the mobile SDK needs a publishable key (uprt_pub_...)."
+        mockServer.enqueue(
+            MockResponse().setResponseCode(401).setBody("""{"message":"$serverMessage"}""")
+        )
+
+        val error = assertFailsWith<UprateError.InvalidApiKey> {
+            apiClient.execute<TestResponse>(APIEndpoint.GetRoadmap)
+        }
+        assertEquals(serverMessage, error.message)
+    }
+
+    @Test
+    fun fallsBackToGenericMessageOn401WithoutBody() = runTest {
+        mockServer.enqueue(MockResponse().setResponseCode(401).setBody("not json"))
+
+        val error = assertFailsWith<UprateError.InvalidApiKey> {
+            apiClient.execute<TestResponse>(APIEndpoint.GetRoadmap)
+        }
+        assertEquals("Invalid API key. Check your API key and try again.", error.message)
+    }
+
+    @Test
     fun maps403ToFeatureNotEnabled() = runTest {
         mockServer.enqueue(MockResponse().setResponseCode(403).setBody("""{"message":"Forbidden"}"""))
 

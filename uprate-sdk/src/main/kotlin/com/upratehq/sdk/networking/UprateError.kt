@@ -15,9 +15,9 @@ sealed class UprateError : Exception() {
         override val message: String get() = "User context has not been set. Call setUserContext() first."
     }
 
-    data object InvalidApiKey : UprateError() {
-        private fun readResolve(): Any = InvalidApiKey
-        override val message: String get() = "Invalid API key. Check your API key and try again."
+    data class InvalidApiKey(val serverMessage: String? = null) : UprateError() {
+        override val message: String
+            get() = serverMessage ?: "Invalid API key. Check your API key and try again."
     }
 
     data object FeatureNotEnabled : UprateError() {

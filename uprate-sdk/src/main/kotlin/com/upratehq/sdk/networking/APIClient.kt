@@ -91,7 +91,16 @@ internal class APIClient(
     @PublishedApi
     internal fun mapError(statusCode: Int, responseBody: String, response: Response): UprateError {
         return when (statusCode) {
-            401 -> UprateError.InvalidApiKey
+            // The server explains *which* wrong key type was sent (REST token,
+            // secret key, ...) — surface that instead of a generic rejection.
+            401 -> {
+                val serverMessage = try {
+                    json.decodeFromString<ErrorResponse>(responseBody).message
+                } catch (_: Exception) {
+                    null
+                }
+                UprateError.InvalidApiKey(serverMessage)
+            }
             403 -> UprateError.FeatureNotEnabled
             404 -> UprateError.NotFound
             422 -> {

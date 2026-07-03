@@ -47,7 +47,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.github.UprateHQ"
                 artifactId = "uprate-android-sdk"
-                version = "0.1.1"
+                version = "0.1.2"
             }
         }
     }
