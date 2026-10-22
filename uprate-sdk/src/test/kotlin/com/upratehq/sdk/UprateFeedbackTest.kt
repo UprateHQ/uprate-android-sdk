@@ -250,7 +250,11 @@ class UprateFeedbackTest {
             { feedback.getUnreadReplies() },
             { feedback.markRead(listOf(reply)) }
         )
-        for (call in calls) {
+        val answers = listOf(
+            MockResponse().setBody("""{"feedback":[],"replies":[]}"""),
+            MockResponse().setResponseCode(401).setBody("""{"message":"Invalid user token","code":"user_token_invalid"}""")
+        )
+        for (call in calls) for (answer in answers) {
             for (changedContext in listOf(
                 null,
                 originalContext.copy(userId = "other-user"),
@@ -262,7 +266,7 @@ class UprateFeedbackTest {
                 mockServer.dispatcher = object : Dispatcher() {
                     override fun dispatch(request: RecordedRequest): MockResponse {
                         apiClient.userContext = changedContext
-                        return MockResponse().setBody("""{"feedback":[],"replies":[]}""")
+                        return answer
                     }
                 }
                 assertFailsWith<UprateError.UserContextChanged> { call() }

@@ -1,5 +1,6 @@
 package com.upratehq.sdk
 
+import com.upratehq.sdk.models.FeedbackSubmission
 import com.upratehq.sdk.networking.APIClient
 import com.upratehq.sdk.networking.APIEndpoint
 import com.upratehq.sdk.networking.UprateError
@@ -100,6 +101,34 @@ class APIClientTest {
             apiClient.execute<TestResponse>(endpoint)
             assertEquals("signed-token", mockServer.takeRequest().getHeader("X-SDK-User-Token"))
         }
+    }
+
+    @Test
+    fun keepsTheUserTokenOutOfRequestLogs() = runTest {
+        val logged = mutableListOf<String>()
+        apiClient = APIClient(
+            apiClient.configuration,
+            OkHttpClient.Builder().addInterceptor { chain ->
+                logged += chain.request().toString()
+                chain.proceed(chain.request())
+            }.build()
+        )
+        apiClient.userContext = UserContext("test-user", userToken = "signed-token")
+        mockServer.enqueue(MockResponse().setBody("""{"ok": true}"""))
+
+        apiClient.execute<TestResponse>(APIEndpoint.GetRoadmap, userContextSnapshot = apiClient.requireUserContext())
+
+        assertEquals(1, logged.size)
+        assertFalse(logged.single().contains("signed-token"))
+    }
+
+    // Java apps and libraries built against 0.1.x call these with three arguments.
+    @Test
+    fun keepsTheJavaSignaturesOfEarlierVersions() {
+        val string = String::class.java
+        UprateSDK::class.java.getMethod("setUserContext", string, string, string)
+        UserContext::class.java.getConstructor(string, string, string)
+        FeedbackSubmission::class.java.getConstructor(string, Int::class.javaObjectType, string, string, string)
     }
 
     @Test

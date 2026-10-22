@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 
 @Serializable
-data class FeedbackSubmission(
+data class FeedbackSubmission @JvmOverloads constructor(
     @SerialName("uuid") val id: String,
     val rating: Int? = null,
     val message: String,

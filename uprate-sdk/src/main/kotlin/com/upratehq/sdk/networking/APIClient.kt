@@ -67,12 +67,12 @@ internal class APIClient(
         val response = executeRequest(requestBuilder.build())
         val responseBody = response.body?.string() ?: ""
 
+        // The previous user's error, such as their rejected token, is as stale as their data.
+        if (userContextSnapshot != null && userContext != userContextSnapshot) {
+            throw UprateError.UserContextChanged
+        }
         if (response.isSuccessful) {
-            val result = json.decodeFromString<T>(responseBody)
-            if (userContextSnapshot != null && userContext != userContextSnapshot) {
-                throw UprateError.UserContextChanged
-            }
-            return result
+            return json.decodeFromString<T>(responseBody)
         }
 
         throw mapError(response.code, responseBody, response)
