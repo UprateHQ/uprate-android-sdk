@@ -89,6 +89,42 @@ class APIClientTest {
         assertEquals("test-user", request.getHeader("X-SDK-User-Id"))
         assertNull(request.getHeader("X-SDK-User-Email"))
         assertNull(request.getHeader("X-SDK-User-Name"))
+        assertNull(request.getHeader("X-SDK-User-Token"))
+    }
+
+    @Test
+    fun sendsUserTokenOnExistingEndpoints() = runTest {
+        apiClient.userContext = UserContext(userId = "test-user", userToken = "signed-token")
+        for (endpoint in listOf(APIEndpoint.GetRoadmap, APIEndpoint.GetMyFeedback, APIEndpoint.RecordPrompt)) {
+            mockServer.enqueue(MockResponse().setBody("""{"ok":true}"""))
+            apiClient.execute<TestResponse>(endpoint)
+            assertEquals("signed-token", mockServer.takeRequest().getHeader("X-SDK-User-Token"))
+        }
+    }
+
+    @Test
+    fun mapsUserTokenErrorsWithServerMessage() = runTest {
+        for (code in listOf("user_token_required", "user_token_invalid")) {
+            val serverMessage = "User verification failed: $code"
+            mockServer.enqueue(
+                MockResponse().setResponseCode(401).setBody("""{"message":"$serverMessage","code":"$code"}""")
+            )
+            val error = assertFailsWith<UprateError.UserTokenRejected> {
+                apiClient.execute<TestResponse>(APIEndpoint.GetMyFeedback)
+            }
+            assertEquals(serverMessage, error.message)
+        }
+    }
+
+    @Test
+    fun mapsOther401CodesToInvalidApiKey() = runTest {
+        mockServer.enqueue(
+            MockResponse().setResponseCode(401).setBody("""{"message":"Wrong SDK key","code":"invalid_api_key"}""")
+        )
+        val error = assertFailsWith<UprateError.InvalidApiKey> {
+            apiClient.execute<TestResponse>(APIEndpoint.GetRoadmap)
+        }
+        assertEquals("Wrong SDK key", error.message)
     }
 
     @Test

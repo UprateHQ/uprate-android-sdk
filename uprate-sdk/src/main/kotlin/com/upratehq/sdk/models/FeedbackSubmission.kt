@@ -11,7 +11,8 @@ data class FeedbackSubmission(
     val rating: Int? = null,
     val message: String,
     val sentiment: String? = null,
-    @SerialName("created_at") val createdAt: String
+    @SerialName("created_at") val createdAt: String,
+    val replies: List<FeedbackReply> = emptyList()
 )
 
 @Serializable

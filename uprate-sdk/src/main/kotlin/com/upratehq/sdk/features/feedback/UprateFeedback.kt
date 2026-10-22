@@ -58,6 +58,21 @@ class UprateFeedback internal constructor(
         return response.feedback
     }
 
+    override suspend fun getUnreadReplies(): List<FeedbackReply> {
+        val userContext = apiClient.requireUserContext()
+        val response: FeedbackRepliesResponse = apiClient.execute(
+            APIEndpoint.GetUnreadReplies, userContextSnapshot = userContext
+        )
+        return response.replies
+    }
+
+    override suspend fun markRead(replies: List<FeedbackReply>) {
+        if (replies.isEmpty()) return
+        val userContext = apiClient.requireUserContext()
+        val body = apiClient.json.encodeToString(MarkRepliesReadRequestBody(replies.map { it.id }))
+        apiClient.execute<FeedbackRepliesResponse>(APIEndpoint.MarkRepliesRead, body, userContext)
+    }
+
     private fun validate(message: String, rating: Int?) {
         val errors = mutableMapOf<String, List<String>>()
         if (message.isBlank()) {

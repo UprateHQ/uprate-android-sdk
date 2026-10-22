@@ -19,11 +19,12 @@ internal class UprateInterceptor(
             .header("X-SDK-Device-Platform", "android")
             .header("X-SDK-App-Version", appVersion)
 
-        val userContext = userContextProvider()
+        val userContext = original.tag(UserContext::class.java) ?: userContextProvider()
         if (userContext != null) {
             builder.header("X-SDK-User-Id", userContext.userId)
             userContext.email?.let { builder.header("X-SDK-User-Email", it) }
             userContext.name?.let { builder.header("X-SDK-User-Name", it) }
+            userContext.userToken?.let { builder.header("X-SDK-User-Token", it) }
         }
 
         return chain.proceed(builder.build())

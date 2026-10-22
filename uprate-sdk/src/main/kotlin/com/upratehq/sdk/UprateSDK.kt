@@ -25,8 +25,8 @@ class UprateSDK internal constructor(
         context = null
     )
 
-    fun setUserContext(userId: String, email: String? = null, name: String? = null) {
-        apiClient.userContext = UserContext(userId, email, name)
+    fun setUserContext(userId: String, email: String? = null, name: String? = null, userToken: String? = null) {
+        apiClient.userContext = UserContext(userId, email, name, userToken)
     }
 
     fun clearUserContext() {

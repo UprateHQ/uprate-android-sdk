@@ -42,12 +42,14 @@ internal class APIClient(
 
     suspend inline fun <reified T> execute(
         endpoint: APIEndpoint,
-        body: String? = null
+        body: String? = null,
+        userContextSnapshot: UserContext? = null
     ): T {
-        requireUserContext()
+        if (userContextSnapshot == null) requireUserContext()
 
         val url = configuration.baseURL.trimEnd('/') + endpoint.path
         val requestBuilder = Request.Builder().url(url)
+            .tag(UserContext::class.java, userContextSnapshot)
 
         val mediaType = "application/json; charset=utf-8".toMediaType()
         when (endpoint.method) {
@@ -66,7 +68,11 @@ internal class APIClient(
         val responseBody = response.body?.string() ?: ""
 
         if (response.isSuccessful) {
-            return json.decodeFromString<T>(responseBody)
+            val result = json.decodeFromString<T>(responseBody)
+            if (userContextSnapshot != null && userContext != userContextSnapshot) {
+                throw UprateError.UserContextChanged
+            }
+            return result
         }
 
         throw mapError(response.code, responseBody, response)
@@ -91,15 +97,16 @@ internal class APIClient(
     @PublishedApi
     internal fun mapError(statusCode: Int, responseBody: String, response: Response): UprateError {
         return when (statusCode) {
-            // The server explains *which* wrong key type was sent (REST token,
-            // secret key, ...) — surface that instead of a generic rejection.
             401 -> {
-                val serverMessage = try {
-                    json.decodeFromString<ErrorResponse>(responseBody).message
+                val errorResponse = try {
+                    json.decodeFromString<ErrorResponse>(responseBody)
                 } catch (_: Exception) {
                     null
                 }
-                UprateError.InvalidApiKey(serverMessage)
+                when (errorResponse?.code) {
+                    "user_token_required", "user_token_invalid" -> UprateError.UserTokenRejected(errorResponse.message)
+                    else -> UprateError.InvalidApiKey(errorResponse?.message)
+                }
             }
             403 -> UprateError.FeatureNotEnabled
             404 -> UprateError.NotFound
