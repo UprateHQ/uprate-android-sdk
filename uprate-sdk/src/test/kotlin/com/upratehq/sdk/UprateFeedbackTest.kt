@@ -277,12 +277,24 @@ class UprateFeedbackTest {
             }
         }
 
-        val register = launch(Dispatchers.IO) { feedback.registerPushToken("fcm-token") }
+        var continuedAfterCancel = false
+        val register = launch(Dispatchers.IO) {
+            feedback.registerPushToken("fcm-token")
+            continuedAfterCancel = true
+        }
         delay(100)
         register.cancel()
         feedback.unregisterPushToken("fcm-token")
+        register.join()
 
         assertEquals(listOf("POST", "DELETE"), events.toList())
+        assertFalse(continuedAfterCancel)
+    }
+
+    @Test
+    fun replyIdFromPushIsStaticForJava() {
+        val method = UprateFeedback::class.java.getMethod("replyId", Map::class.java)
+        assertTrue(java.lang.reflect.Modifier.isStatic(method.modifiers))
     }
 
     @Test
