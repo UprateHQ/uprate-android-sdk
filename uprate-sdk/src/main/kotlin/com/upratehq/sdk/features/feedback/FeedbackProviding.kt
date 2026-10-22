@@ -14,4 +14,6 @@ interface FeedbackProviding {
     suspend fun getMySubmissions(): List<FeedbackSubmission>
     suspend fun getUnreadReplies(): List<FeedbackReply>
     suspend fun markRead(replies: List<FeedbackReply>)
+    suspend fun registerPushToken(token: String)
+    suspend fun unregisterPushToken(token: String)
 }

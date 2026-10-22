@@ -10,5 +10,7 @@ internal sealed class APIEndpoint(val path: String, val method: String) {
     data object GetMyFeedback : APIEndpoint("/feedback", "GET")
     data object GetUnreadReplies : APIEndpoint("/replies/unread", "GET")
     data object MarkRepliesRead : APIEndpoint("/replies/read", "POST")
+    data object RegisterPushToken : APIEndpoint("/push-tokens", "POST")
+    data object UnregisterPushToken : APIEndpoint("/push-tokens", "DELETE")
     data object RecordPrompt : APIEndpoint("/review-signals", "POST")
 }
