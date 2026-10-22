@@ -191,6 +191,42 @@ If the user context changes during one of these requests or `getMySubmissions()`
 throws `UprateError.UserContextChanged` instead of returning the previous user's result.
 Dismiss any replies already shown when the user logs out or switches accounts.
 
+#### Push notifications
+
+Uprate sends a notification that a reply is available, without the reply text.
+Upload your Firebase service-account JSON on the SDK page's **Push** tab.
+Your app handles notification permission, FCM tokens, and taps; the SDK adds no
+Firebase dependency.
+
+After `setUserContext`, get the current FCM token with
+`FirebaseMessaging.getInstance().token` and register it. Also register refreshed
+tokens from `FirebaseMessagingService.onNewToken` once the user context is set.
+Call the suspending SDK methods from your app's coroutine scope:
+
+```kotlin
+UprateSDK.instance.feedback.registerPushToken(token)
+```
+
+On logout, unregister the current token before clearing the user context:
+
+```kotlin
+UprateSDK.instance.feedback.unregisterPushToken(token)
+UprateSDK.instance.clearUserContext()
+```
+
+Use `replyId(fromPush)` to recognize Uprate's push data. On notification tap, pass
+the notification's data to your tap handler and fetch the replies:
+
+```kotlin
+import com.upratehq.sdk.features.feedback.UprateFeedback
+
+if (UprateFeedback.replyId(fromPush = data) != null) {
+    val replies = UprateSDK.instance.feedback.getUnreadReplies()
+    showRepliesAndAwaitDismissal(replies)
+    UprateSDK.instance.feedback.markRead(replies)
+}
+```
+
 #### Review Signals
 
 Record when you show the Google Play review prompt to enrich review data in your dashboard:
