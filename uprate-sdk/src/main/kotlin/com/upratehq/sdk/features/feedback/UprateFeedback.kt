@@ -6,6 +6,8 @@ import com.upratehq.sdk.networking.APIClient
 import com.upratehq.sdk.networking.APIEndpoint
 import com.upratehq.sdk.networking.DeviceMetadata
 import com.upratehq.sdk.networking.UprateError
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -15,6 +17,8 @@ class UprateFeedback internal constructor(
 ) : FeedbackProviding {
 
     override var collectDeviceMetadata: Boolean = true
+
+    private val pushTokenChanges = Mutex()
 
     override suspend fun submit(
         message: String,
@@ -75,14 +79,15 @@ class UprateFeedback internal constructor(
         apiClient.execute<FeedbackRepliesResponse>(APIEndpoint.MarkRepliesRead, body, userContext)
     }
 
-    override suspend fun registerPushToken(token: String) {
-        val body = apiClient.json.encodeToString(mapOf("token" to token, "provider" to "fcm"))
-        apiClient.execute<Map<String, String>>(APIEndpoint.RegisterPushToken, body)
-    }
+    override suspend fun registerPushToken(token: String) = changePushToken(APIEndpoint.RegisterPushToken, token)
 
-    override suspend fun unregisterPushToken(token: String) {
+    override suspend fun unregisterPushToken(token: String) = changePushToken(APIEndpoint.UnregisterPushToken, token)
+
+    // One change at a time, so a slow registration can't reach the server after the logout that unregisters the device.
+    private suspend fun changePushToken(endpoint: APIEndpoint, token: String) = pushTokenChanges.withLock {
         val body = apiClient.json.encodeToString(mapOf("token" to token, "provider" to "fcm"))
-        apiClient.execute<Map<String, String>>(APIEndpoint.UnregisterPushToken, body)
+        apiClient.execute<Map<String, String>>(endpoint, body)
+        Unit
     }
 
     private fun validate(message: String, rating: Int?) {
