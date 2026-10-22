@@ -8,6 +8,7 @@ import com.upratehq.sdk.networking.UprateError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -261,6 +262,27 @@ class UprateFeedbackTest {
         register.await()
         unregister.await()
         assertEquals(listOf("POST", "DELETE"), arrived.toList())
+    }
+
+    // Cancelling the caller must not let the unregistration overtake a registration the server is still handling.
+    @Test
+    fun cancelledRegistrationStillFinishesBeforeTheNextChange() = runBlocking {
+        apiClient.userContext = UserContext("test-user")
+        val events = java.util.Collections.synchronizedList(mutableListOf<String>())
+        mockServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (request.method == "POST") Thread.sleep(400)
+                events += request.method!!
+                return MockResponse().setBody("""{"status":"ok"}""")
+            }
+        }
+
+        val register = launch(Dispatchers.IO) { feedback.registerPushToken("fcm-token") }
+        delay(100)
+        register.cancel()
+        feedback.unregisterPushToken("fcm-token")
+
+        assertEquals(listOf("POST", "DELETE"), events.toList())
     }
 
     @Test

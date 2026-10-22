@@ -6,8 +6,10 @@ import com.upratehq.sdk.networking.APIClient
 import com.upratehq.sdk.networking.APIEndpoint
 import com.upratehq.sdk.networking.DeviceMetadata
 import com.upratehq.sdk.networking.UprateError
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -84,9 +86,10 @@ class UprateFeedback internal constructor(
     override suspend fun unregisterPushToken(token: String) = changePushToken(APIEndpoint.UnregisterPushToken, token)
 
     // One change at a time, so a slow registration can't reach the server after the logout that unregisters the device.
+    // A cancelled caller still waits for its request: the server may handle it even after the call is dropped.
     private suspend fun changePushToken(endpoint: APIEndpoint, token: String) = pushTokenChanges.withLock {
         val body = apiClient.json.encodeToString(mapOf("token" to token, "provider" to "fcm"))
-        apiClient.execute<Map<String, String>>(endpoint, body)
+        withContext(NonCancellable) { apiClient.execute<Map<String, String>>(endpoint, body) }
         Unit
     }
 
