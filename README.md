@@ -210,7 +210,8 @@ UprateSDK.instance.feedback.registerPushToken(token)
 On logout, unregister the current token before clearing the user context:
 
 ```kotlin
-UprateSDK.instance.feedback.unregisterPushToken(token)
+// Clear the user context even when unregistering fails, for example offline.
+runCatching { UprateSDK.instance.feedback.unregisterPushToken(token) }
 UprateSDK.instance.clearUserContext()
 ```
 
