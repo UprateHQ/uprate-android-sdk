@@ -211,8 +211,9 @@ UprateSDK.instance.feedback.registerPushToken(token)
 
 On logout, unregister the current token before clearing the user context. Until
 the device is unregistered or someone else registers it, it can still get the
-previous person's reply notifications (they never carry the reply text), so keep
-the token and try unregistering again the next time the app starts signed out:
+previous person's reply notifications (they never carry the reply text). If
+unregistering fails, keep that person's user ID, user token and the device token,
+and on the next start set that user context again, unregister, then clear it:
 
 ```kotlin
 // Clear the user context even when unregistering fails, for example offline.
