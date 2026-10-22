@@ -5,6 +5,10 @@ import com.upratehq.sdk.features.feedback.FeedbackProviding
 import com.upratehq.sdk.models.FeedbackReply
 import com.upratehq.sdk.networking.APIClient
 import com.upratehq.sdk.networking.UprateError
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -233,6 +237,30 @@ class UprateFeedbackTest {
         assertEquals("application/json; charset=utf-8", request.getHeader("Content-Type"))
         assertEquals("test-user", request.getHeader("X-SDK-User-Id"))
         assertEquals("signed-token", request.getHeader("X-SDK-User-Token"))
+    }
+
+    // A slow registration must not reach the server after the logout that unregisters the device.
+    @Test
+    fun pushTokenChangesGoOutOneAtATime() = runBlocking {
+        apiClient.userContext = UserContext("test-user")
+        val arrived = java.util.Collections.synchronizedList(mutableListOf<String>())
+        mockServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                arrived += request.method!!
+                if (request.method == "POST") Thread.sleep(400)
+                return MockResponse().setBody("""{"status":"ok"}""")
+            }
+        }
+
+        val register = async(Dispatchers.IO) { feedback.registerPushToken("fcm-token") }
+        delay(100)
+        val unregister = async(Dispatchers.IO) { feedback.unregisterPushToken("fcm-token") }
+        delay(150)
+
+        assertEquals(listOf("POST"), arrived.toList())
+        register.await()
+        unregister.await()
+        assertEquals(listOf("POST", "DELETE"), arrived.toList())
     }
 
     @Test

@@ -194,7 +194,9 @@ Dismiss any replies already shown when the user logs out or switches accounts.
 #### Push notifications
 
 Uprate sends a notification that a reply is available, without the reply text.
-Upload your Firebase service-account JSON on the SDK page's **Push** tab.
+Upload your Firebase service-account JSON on the SDK page's **Push** tab. Apps made
+for kids can't use push; `registerPushToken` throws `UprateError.FeatureNotEnabled`
+for them.
 Your app handles notification permission, FCM tokens, and taps; the SDK adds no
 Firebase dependency.
 
@@ -207,7 +209,10 @@ Call the suspending SDK methods from your app's coroutine scope:
 UprateSDK.instance.feedback.registerPushToken(token)
 ```
 
-On logout, unregister the current token before clearing the user context:
+On logout, unregister the current token before clearing the user context. Until
+the device is unregistered or someone else registers it, it can still get the
+previous person's reply notifications (they never carry the reply text), so keep
+the token and try unregistering again the next time the app starts signed out:
 
 ```kotlin
 // Clear the user context even when unregistering fails, for example offline.
