@@ -75,6 +75,16 @@ class UprateFeedback internal constructor(
         apiClient.execute<FeedbackRepliesResponse>(APIEndpoint.MarkRepliesRead, body, userContext)
     }
 
+    override suspend fun registerPushToken(token: String) {
+        val body = apiClient.json.encodeToString(mapOf("token" to token, "provider" to "fcm"))
+        apiClient.execute<Map<String, String>>(APIEndpoint.RegisterPushToken, body)
+    }
+
+    override suspend fun unregisterPushToken(token: String) {
+        val body = apiClient.json.encodeToString(mapOf("token" to token, "provider" to "fcm"))
+        apiClient.execute<Map<String, String>>(APIEndpoint.UnregisterPushToken, body)
+    }
+
     private fun validate(message: String, rating: Int?) {
         val errors = mutableMapOf<String, List<String>>()
         if (message.isBlank()) {
@@ -88,5 +98,10 @@ class UprateFeedback internal constructor(
         if (errors.isNotEmpty()) {
             throw UprateError.ValidationError(message = "Validation failed", errors = errors)
         }
+    }
+
+    companion object {
+        fun replyId(fromPush: Map<String, String>): String? =
+            fromPush["uprate_reply_uuid"]?.takeIf { it.isNotEmpty() }
     }
 }

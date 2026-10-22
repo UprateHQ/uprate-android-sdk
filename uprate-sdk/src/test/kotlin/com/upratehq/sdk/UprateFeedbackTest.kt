@@ -206,6 +206,54 @@ class UprateFeedbackTest {
     }
 
     @Test
+    fun registerPushTokenUsesPostWithFcmToken() = runTest {
+        apiClient.userContext = UserContext("test-user", userToken = "signed-token")
+        mockServer.enqueue(MockResponse().setBody("""{"status":"registered"}"""))
+        val provider: FeedbackProviding = feedback
+        provider.registerPushToken("fcm-token")
+        val request = mockServer.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/sdk/v1/push-tokens", request.path)
+        assertEquals("""{"token":"fcm-token","provider":"fcm"}""", request.body.readUtf8())
+        assertEquals("application/json; charset=utf-8", request.getHeader("Content-Type"))
+        assertEquals("test-user", request.getHeader("X-SDK-User-Id"))
+        assertEquals("signed-token", request.getHeader("X-SDK-User-Token"))
+    }
+
+    @Test
+    fun unregisterPushTokenUsesDeleteWithFcmToken() = runTest {
+        apiClient.userContext = UserContext("test-user", userToken = "signed-token")
+        mockServer.enqueue(MockResponse().setBody("""{"status":"removed"}"""))
+        val provider: FeedbackProviding = feedback
+        provider.unregisterPushToken("fcm-token")
+        val request = mockServer.takeRequest()
+        assertEquals("DELETE", request.method)
+        assertEquals("/api/sdk/v1/push-tokens", request.path)
+        assertEquals("""{"token":"fcm-token","provider":"fcm"}""", request.body.readUtf8())
+        assertEquals("application/json; charset=utf-8", request.getHeader("Content-Type"))
+        assertEquals("test-user", request.getHeader("X-SDK-User-Id"))
+        assertEquals("signed-token", request.getHeader("X-SDK-User-Token"))
+    }
+
+    @Test
+    fun replyIdFromPushReturnsReplyIdWithoutRequest() {
+        assertEquals("reply-1", UprateFeedback.replyId(fromPush = mapOf("uprate_reply_uuid" to "reply-1")))
+        assertEquals(0, mockServer.requestCount)
+    }
+
+    @Test
+    fun replyIdFromPushWithoutReplyIdReturnsNullWithoutRequest() {
+        assertNull(UprateFeedback.replyId(fromPush = mapOf("uprate_feedback_uuid" to "sub-1")))
+        assertEquals(0, mockServer.requestCount)
+    }
+
+    @Test
+    fun replyIdFromPushWithEmptyReplyIdReturnsNullWithoutRequest() {
+        assertNull(UprateFeedback.replyId(fromPush = mapOf("uprate_reply_uuid" to "")))
+        assertEquals(0, mockServer.requestCount)
+    }
+
+    @Test
     fun getUnreadRepliesUsesSnapshotBeforeInterceptorRuns() = runTest {
         val originalContext = UserContext("test-user", "test@example.com", "Test User", "original-token")
         val client = OkHttpClient.Builder().addInterceptor { chain ->
