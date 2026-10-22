@@ -7,6 +7,8 @@ import com.upratehq.sdk.networking.APIEndpoint
 import com.upratehq.sdk.networking.DeviceMetadata
 import com.upratehq.sdk.networking.UprateError
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -90,7 +92,7 @@ class UprateFeedback internal constructor(
     private suspend fun changePushToken(endpoint: APIEndpoint, token: String) = pushTokenChanges.withLock {
         val body = apiClient.json.encodeToString(mapOf("token" to token, "provider" to "fcm"))
         withContext(NonCancellable) { apiClient.execute<Map<String, String>>(endpoint, body) }
-        Unit
+        currentCoroutineContext().ensureActive()
     }
 
     private fun validate(message: String, rating: Int?) {
@@ -109,6 +111,7 @@ class UprateFeedback internal constructor(
     }
 
     companion object {
+        @JvmStatic
         fun replyId(fromPush: Map<String, String>): String? =
             fromPush["uprate_reply_uuid"]?.takeIf { it.isNotEmpty() }
     }
