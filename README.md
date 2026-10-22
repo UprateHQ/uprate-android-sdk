@@ -187,8 +187,8 @@ includes each submission's `replies`, defaulting to an empty list on older serve
 Each `FeedbackReply` has `id`, `feedbackId`, `body`, `createdAt`, and nullable
 `readAt`; timestamps are ISO 8601 strings.
 
-If the user context changes during either request, the SDK throws
-`UprateError.UserContextChanged` instead of returning the previous user's result.
+If the user context changes during one of these requests or `getMySubmissions()`, the SDK
+throws `UprateError.UserContextChanged` instead of returning the previous user's result.
 Dismiss any replies already shown when the user logs out or switches accounts.
 
 #### Review Signals

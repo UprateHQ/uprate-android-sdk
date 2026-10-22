@@ -54,7 +54,9 @@ class UprateFeedback internal constructor(
     }
 
     override suspend fun getMySubmissions(): List<FeedbackSubmission> {
-        val response: FeedbackListResponse = apiClient.execute(APIEndpoint.GetMyFeedback)
+        val response: FeedbackListResponse = apiClient.execute(
+            APIEndpoint.GetMyFeedback, userContextSnapshot = apiClient.requireUserContext()
+        )
         return response.feedback
     }
 

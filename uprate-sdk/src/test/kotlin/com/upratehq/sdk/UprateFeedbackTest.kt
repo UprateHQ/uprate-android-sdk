@@ -243,44 +243,30 @@ class UprateFeedbackTest {
     }
 
     @Test
-    fun getUnreadRepliesRejectsUserContextChangesDuringRequest() = runTest {
+    fun historyAndReplyCallsRejectUserContextChangesDuringRequest() = runTest {
         val originalContext = UserContext("test-user", "test@example.com", "Test User", "original-token")
-        for (changedContext in listOf(
-            null,
-            originalContext.copy(userId = "other-user"),
-            originalContext.copy(email = "other@example.com"),
-            originalContext.copy(name = "Other Name"),
-            originalContext.copy(userToken = "other-token")
-        )) {
-            apiClient.userContext = originalContext
-            mockServer.dispatcher = object : Dispatcher() {
-                override fun dispatch(request: RecordedRequest): MockResponse {
-                    apiClient.userContext = changedContext
-                    return MockResponse().setBody("""{"replies":[]}""")
+        val calls: List<suspend () -> Unit> = listOf(
+            { feedback.getMySubmissions() },
+            { feedback.getUnreadReplies() },
+            { feedback.markRead(listOf(reply)) }
+        )
+        for (call in calls) {
+            for (changedContext in listOf(
+                null,
+                originalContext.copy(userId = "other-user"),
+                originalContext.copy(email = "other@example.com"),
+                originalContext.copy(name = "Other Name"),
+                originalContext.copy(userToken = "other-token")
+            )) {
+                apiClient.userContext = originalContext
+                mockServer.dispatcher = object : Dispatcher() {
+                    override fun dispatch(request: RecordedRequest): MockResponse {
+                        apiClient.userContext = changedContext
+                        return MockResponse().setBody("""{"feedback":[],"replies":[]}""")
+                    }
                 }
+                assertFailsWith<UprateError.UserContextChanged> { call() }
             }
-            assertFailsWith<UprateError.UserContextChanged> { feedback.getUnreadReplies() }
-        }
-    }
-
-    @Test
-    fun markReadRejectsUserContextChangesDuringRequest() = runTest {
-        val originalContext = UserContext("test-user", "test@example.com", "Test User", "original-token")
-        for (changedContext in listOf(
-            null,
-            originalContext.copy(userId = "other-user"),
-            originalContext.copy(email = "other@example.com"),
-            originalContext.copy(name = "Other Name"),
-            originalContext.copy(userToken = "other-token")
-        )) {
-            apiClient.userContext = originalContext
-            mockServer.dispatcher = object : Dispatcher() {
-                override fun dispatch(request: RecordedRequest): MockResponse {
-                    apiClient.userContext = changedContext
-                    return MockResponse().setBody("""{"replies":[]}""")
-                }
-            }
-            assertFailsWith<UprateError.UserContextChanged> { feedback.markRead(listOf(reply)) }
         }
     }
 
