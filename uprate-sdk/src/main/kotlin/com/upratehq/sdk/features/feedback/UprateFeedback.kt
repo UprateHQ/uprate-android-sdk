@@ -6,6 +6,12 @@ import com.upratehq.sdk.networking.APIClient
 import com.upratehq.sdk.networking.APIEndpoint
 import com.upratehq.sdk.networking.DeviceMetadata
 import com.upratehq.sdk.networking.UprateError
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -15,6 +21,8 @@ class UprateFeedback internal constructor(
 ) : FeedbackProviding {
 
     override var collectDeviceMetadata: Boolean = true
+
+    private val pushTokenChanges = Mutex()
 
     override suspend fun submit(
         message: String,
@@ -75,6 +83,18 @@ class UprateFeedback internal constructor(
         apiClient.execute<FeedbackRepliesResponse>(APIEndpoint.MarkRepliesRead, body, userContext)
     }
 
+    override suspend fun registerPushToken(token: String) = changePushToken(APIEndpoint.RegisterPushToken, token)
+
+    override suspend fun unregisterPushToken(token: String) = changePushToken(APIEndpoint.UnregisterPushToken, token)
+
+    // One change at a time, so a slow registration can't reach the server after the logout that unregisters the device.
+    // A cancelled caller still waits for its request: the server may handle it even after the call is dropped.
+    private suspend fun changePushToken(endpoint: APIEndpoint, token: String) = pushTokenChanges.withLock {
+        val body = apiClient.json.encodeToString(mapOf("token" to token, "provider" to "fcm"))
+        withContext(NonCancellable) { apiClient.execute<Map<String, String>>(endpoint, body) }
+        currentCoroutineContext().ensureActive()
+    }
+
     private fun validate(message: String, rating: Int?) {
         val errors = mutableMapOf<String, List<String>>()
         if (message.isBlank()) {
@@ -88,5 +108,11 @@ class UprateFeedback internal constructor(
         if (errors.isNotEmpty()) {
             throw UprateError.ValidationError(message = "Validation failed", errors = errors)
         }
+    }
+
+    companion object {
+        @JvmStatic
+        fun replyId(fromPush: Map<String, String>): String? =
+            fromPush["uprate_reply_uuid"]?.takeIf { it.isNotEmpty() }
     }
 }
