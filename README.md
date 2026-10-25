@@ -44,7 +44,7 @@ Add the dependency to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.UprateHQ:uprate-android-sdk:0.1.2")
+    implementation("com.github.UprateHQ:uprate-android-sdk:0.2.0")
 }
 ```
 
