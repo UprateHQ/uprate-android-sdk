@@ -20,6 +20,13 @@ sealed class UprateError : Exception() {
             get() = serverMessage ?: "Invalid API key. Check your API key and try again."
     }
 
+    data class UserTokenRejected(override val message: String) : UprateError()
+
+    data object UserContextChanged : UprateError() {
+        private fun readResolve(): Any = UserContextChanged
+        override val message: String get() = "User context changed while the request was in progress."
+    }
+
     data object FeatureNotEnabled : UprateError() {
         private fun readResolve(): Any = FeatureNotEnabled
         override val message: String get() = "This feature is not enabled for your account."
@@ -51,7 +58,7 @@ sealed class UprateError : Exception() {
 }
 
 @Serializable
-internal data class ErrorResponse(val message: String)
+internal data class ErrorResponse(val message: String, val code: String? = null)
 
 @Serializable
 internal data class ValidationErrorResponse(

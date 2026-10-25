@@ -43,6 +43,34 @@ class ConfigurationTest {
     }
 
     @Test
+    fun userTokenIsClearedOnLogout() = runTest {
+        val mockServer = MockWebServer()
+        mockServer.start()
+        try {
+            val sdk = UprateSDK(
+                configuration = UprateConfiguration(apiKey = testApiKey, baseURL = mockServer.url("/api/sdk/v1").toString())
+            )
+            sdk.setUserContext(userId = "user-1", userToken = "signed-token")
+            mockServer.enqueue(MockResponse().setBody("""{"replies":[]}"""))
+            sdk.feedback.getUnreadReplies()
+            assertEquals("signed-token", mockServer.takeRequest().getHeader("X-SDK-User-Token"))
+
+            sdk.clearUserContext()
+            assertFailsWith<UprateError.UserContextNotSet> { sdk.feedback.getUnreadReplies() }
+            assertEquals(1, mockServer.requestCount)
+
+            sdk.setUserContext(userId = "user-2")
+            mockServer.enqueue(MockResponse().setBody("""{"replies":[]}"""))
+            sdk.feedback.getUnreadReplies()
+            val request = mockServer.takeRequest()
+            assertEquals("user-2", request.getHeader("X-SDK-User-Id"))
+            assertNull(request.getHeader("X-SDK-User-Token"))
+        } finally {
+            mockServer.shutdown()
+        }
+    }
+
+    @Test
     fun customBaseURLUsed() = runTest {
         val mockServer = MockWebServer()
         mockServer.start()

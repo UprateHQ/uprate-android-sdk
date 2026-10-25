@@ -211,6 +211,7 @@ class ModelDecodingTest {
         assertEquals(5, submission.rating)
         assertEquals("Love it", submission.message)
         assertEquals("positive", submission.sentiment)
+        assertEquals(emptyList(), submission.replies)
     }
 
     @Test
@@ -225,6 +226,44 @@ class ModelDecodingTest {
         val submission = uprateJson.decodeFromString<FeedbackSubmission>(json)
         assertNull(submission.rating)
         assertNull(submission.sentiment)
+        assertEquals(emptyList(), submission.replies)
+    }
+
+    @Test
+    fun decodesFeedbackSubmissionWithReplies() {
+        val json = """
+        {
+            "uuid": "sub-1",
+            "message": "Checkout is slow",
+            "created_at": "2026-10-21T10:00:00+00:00",
+            "replies": [{
+                "uuid": "reply-1",
+                "feedback_uuid": "sub-1",
+                "body": "Thanks, fixed in 2.3",
+                "created_at": "2026-10-22T10:00:00+00:00",
+                "read_at": "2026-10-22T11:00:00+00:00"
+            }]
+        }
+        """
+        val submission = uprateJson.decodeFromString<FeedbackSubmission>(json)
+        assertEquals(
+            listOf(FeedbackReply("reply-1", "sub-1", "Thanks, fixed in 2.3", "2026-10-22T10:00:00+00:00", "2026-10-22T11:00:00+00:00")),
+            submission.replies
+        )
+    }
+
+    @Test
+    fun decodesUnreadFeedbackReply() {
+        for (readAt in listOf("", ",\"read_at\":null")) {
+            val reply = uprateJson.decodeFromString<FeedbackReply>(
+                """{"uuid":"reply-1","feedback_uuid":"sub-1","body":"Fixed","created_at":"2026-10-22T10:00:00+00:00"$readAt}"""
+            )
+            assertEquals("reply-1", reply.id)
+            assertEquals("sub-1", reply.feedbackId)
+            assertEquals("Fixed", reply.body)
+            assertEquals("2026-10-22T10:00:00+00:00", reply.createdAt)
+            assertNull(reply.readAt)
+        }
     }
 
     @Test
